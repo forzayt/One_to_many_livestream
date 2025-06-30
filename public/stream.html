@@ -18,8 +18,7 @@
         mimeType: 'video/webm; codecs=vp8,opus'
       });
 
-      const ws = new WebSocket(`wss://${window.location.hostname}/stream`);
-
+      const ws = new WebSocket('wss://one-to-many-livestream.onrender.com/stream');
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0 && ws.readyState === 1) {
