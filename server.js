@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
+const https = require('https');
 
 const app = express();
 const PORT = 3000;
@@ -15,6 +16,18 @@ app.use('/stream', express.static(STREAM_DIR));
 // Start server
 const server = app.listen(PORT, () => {
   console.log(`✅ Web + HLS server running at http://localhost:${PORT}`);
+
+  // Fetch and log public IP
+  https.get('https://api.ipify.org?format=json', (res) => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => {
+      const ip = JSON.parse(data).ip;
+      console.log(`🌐 Public IP: http://${ip}:${PORT}`);
+    });
+  }).on('error', (err) => {
+    console.error('❌ Failed to fetch public IP:', err.message);
+  });
 });
 
 // WebSocket server for stream input
@@ -26,7 +39,7 @@ wss.on('connection', (ws) => {
   // Ensure stream folder exists
   if (!fs.existsSync(STREAM_DIR)) fs.mkdirSync(STREAM_DIR);
 
-  // Start FFmpeg process with tuned options
+  // Start FFmpeg process
   const ffmpeg = spawn('ffmpeg', [
     '-f', 'webm',
     '-i', 'pipe:0',
@@ -37,13 +50,12 @@ wss.on('connection', (ws) => {
     '-ar', '44100',
     '-b:a', '64k',
     '-f', 'hls',
-    '-hls_time', '2',                             // 👈 2 sec segments
-    '-hls_list_size', '6',                        // 👈 playlist holds 6 chunks
-    '-hls_flags', 'delete_segments+append_list',  // 👈 smooth playback
+    '-hls_time', '2',
+    '-hls_list_size', '6',
+    '-hls_flags', 'delete_segments+append_list',
     path.join(STREAM_DIR, 'stream.m3u8')
   ]);
 
-  // Log FFmpeg output
   ffmpeg.stderr.on('data', (data) => {
     console.log('FFmpeg:', data.toString());
   });
