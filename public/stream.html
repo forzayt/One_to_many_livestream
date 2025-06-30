@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><title>Stream Webcam</title></head>
+<body>
+  <h2>Start Live Stream</h2>
+  <video id="preview" width="640" height="360" autoplay muted></video>
+
+  <script>
+    const video = document.getElementById('preview');
+
+    async function startStreaming() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      video.srcObject = stream;
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm; codecs=vp8,opus'
+      });
+
+      const ws = new WebSocket('ws://localhost:3000/stream');
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0 && ws.readyState === 1) {
+          ws.send(e.data);
+        }
+      };
+
+      mediaRecorder.start(1000); // send every 1s
+    }
+
+    startStreaming();
+  </script>
+</body>
+</html>
