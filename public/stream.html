@@ -6,19 +6,25 @@
 <body>
   <h2>Start Live Stream</h2>
   <video id="preview" width="640" height="360" autoplay muted></video>
+  <button id="startBtn">Start Stream</button>
+  <button id="stopBtn" style="display:none;">Stop Stream</button>
 
   <script>
     const video = document.getElementById('preview');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    let mediaRecorder = null;
+    let ws = null;
 
     async function startStreaming() {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       video.srcObject = stream;
 
-      const mediaRecorder = new MediaRecorder(stream, {
+      mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm; codecs=vp8,opus'
       });
 
-      const ws = new WebSocket('wss://one-to-many-livestream.onrender.com/stream');
+      ws = new WebSocket(`wss://${window.location.hostname}/stream`);
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0 && ws.readyState === 1) {
@@ -27,9 +33,27 @@
       };
 
       mediaRecorder.start(1000); // 1-second chunks
+      startBtn.disabled = true;
+      startBtn.textContent = 'Streaming...';
+      stopBtn.style.display = '';
+      alert('Streaming started!');
     }
 
-    startStreaming();
+    function stopStreaming() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      if (ws && ws.readyState === 1) {
+        ws.close();
+      }
+      startBtn.disabled = false;
+      startBtn.textContent = 'Start Stream';
+      stopBtn.style.display = 'none';
+      alert('Streaming stopped!');
+    }
+
+    startBtn.addEventListener('click', startStreaming);
+    stopBtn.addEventListener('click', stopStreaming);
   </script>
 </body>
 </html>
