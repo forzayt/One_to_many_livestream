@@ -5,7 +5,7 @@
 </head>
 <body>
   <h2>Live Viewer</h2>
-  <video id="player" width="640" height="360" style="display:none;" controls></video>
+  <video id="player" width="640" height="360" controls></video>
   <div id="loading" style="font-size:18px; color:#555;">Loading stream... Please wait for the stream to buffer.</div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -30,8 +30,6 @@
 
     function startPlayback() {
       loading.style.display = 'none';
-      video.style.display = '';
-      video.controls = true;
       if (Hls.isSupported()) {
         const hls = new Hls({
           liveSyncDuration: 3,
@@ -46,9 +44,8 @@
       }
     }
 
-    // Hide video and controls initially
-    video.style.display = 'none';
-    video.controls = false;
+    // Player is always visible now
+    video.controls = true;
     loading.style.display = '';
 
     checkSegmentsAndPlay();
