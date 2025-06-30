@@ -5,24 +5,33 @@
 </head>
 <body>
   <h2>Live Viewer</h2>
-  <video id="player" width="640" height="360" controls autoplay></video>
+  <div id="loading" style="font-size:18px; color:#555;">Loading stream... Please wait 30 seconds for the stream to buffer.</div>
+  <video id="player" width="640" height="360" controls autoplay style="display:none;"></video>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     const video = document.getElementById('player');
+    const loading = document.getElementById('loading');
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        liveSyncDuration: 3,
-        maxBufferLength: 5,
-        maxMaxBufferLength: 10,
-        lowLatencyMode: true
-      });
-      hls.loadSource('/stream/stream.m3u8');
-      hls.attachMedia(video);
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = '/stream/stream.m3u8';
+    function startPlayback() {
+      loading.style.display = 'none';
+      video.style.display = '';
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          liveSyncDuration: 30,         // Start playback 30s behind live edge
+          maxBufferLength: 60,          // Buffer up to 60s
+          maxMaxBufferLength: 120,      // Max buffer
+          lowLatencyMode: false         // Disable low latency for smoother playback
+        });
+        hls.loadSource('/stream/stream.m3u8');
+        hls.attachMedia(video);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = '/stream/stream.m3u8';
+      }
     }
+
+    // Wait 30 seconds before starting playback
+    setTimeout(startPlayback, 30000);
   </script>
 </body>
 </html>
