@@ -2,13 +2,15 @@
 <html>
 <head>
   <title>Watch Live</title>
+  <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
 </head>
 <body>
   <h2>Live Viewer</h2>
-  <div id="loading" style="font-size:18px; color:#555;">Loading stream... Please wait 30 seconds for the stream to buffer.</div>
-  <video id="player" width="640" height="360" controls autoplay style="display:none;"></video>
+  <div id="loading" style="font-size:18px; color:#555;">Loading stream... Please wait 10 seconds for the stream to buffer.</div>
+  <video-js id="player" class="video-js vjs-default-skin" width="640" height="360" controls autoplay style="display:none;"></video-js>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@latest/dist/videojs-contrib-hls.min.js"></script>
   <script>
     const video = document.getElementById('player');
     const loading = document.getElementById('loading');
@@ -16,22 +18,15 @@
     function startPlayback() {
       loading.style.display = 'none';
       video.style.display = '';
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          liveSyncDuration: 30,         // Start playback 30s behind live edge
-          maxBufferLength: 60,          // Buffer up to 60s
-          maxMaxBufferLength: 120,      // Max buffer
-          lowLatencyMode: false         // Disable low latency for smoother playback
-        });
-        hls.loadSource('/stream/stream.m3u8');
-        hls.attachMedia(video);
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = '/stream/stream.m3u8';
-      }
+      const player = videojs('player');
+      // To use a CDN, replace the source URL below with your CDN's HLS URL, e.g.:
+      // player.src({ src: 'https://your-cdn.com/hls/live.m3u8', type: 'application/x-mpegURL' });
+      player.src({ src: '/stream/stream.m3u8', type: 'application/x-mpegURL' });
+      player.play();
     }
 
-    // Wait 30 seconds before starting playback
-    setTimeout(startPlayback, 30000);
+    // Wait 10 seconds before starting playback
+    setTimeout(startPlayback, 10000);
   </script>
 </body>
 </html>
