@@ -18,7 +18,7 @@
         mimeType: 'video/webm; codecs=vp8,opus'
       });
 
-      const ws = new WebSocket('ws://localhost:3000/stream');
+      const ws = new WebSocket('ws://3.6.90.207:3000/stream');
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0 && ws.readyState === 1) {
