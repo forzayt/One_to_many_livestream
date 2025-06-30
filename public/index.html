@@ -2,18 +2,27 @@
 <html>
 <head>
   <title>Watch Live</title>
+  <link href="https://vjs.zencdn.net/8.9.0/video-js.css" rel="stylesheet" />
 </head>
 <body>
   <h2>Live Viewer</h2>
-  <video id="player" width="640" height="360" controls></video>
+  <video
+    id="player"
+    class="video-js vjs-default-skin"
+    width="640"
+    height="360"
+    controls
+    preload="auto"
+  ></video>
   <div id="loading" style="font-size:18px; color:#555;">Loading stream... Please wait for the stream to buffer.</div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://vjs.zencdn.net/8.9.0/video.min.js"></script>
   <script>
     const video = document.getElementById('player');
     const loading = document.getElementById('loading');
+    video.muted = true; // For autoplay
 
-    // Wait until at least 10 segments are available before starting playback
     function checkSegmentsAndPlay() {
       fetch('/stream/stream.m3u8', { cache: 'no-store' })
         .then(res => res.text())
@@ -31,22 +40,17 @@
     function startPlayback() {
       loading.style.display = 'none';
       if (Hls.isSupported()) {
-        const hls = new Hls({
-          liveSyncDuration: 3,
-          maxBufferLength: 5,
-          maxMaxBufferLength: 10,
-          lowLatencyMode: true
-        });
+        const hls = new Hls();
         hls.loadSource('/stream/stream.m3u8');
         hls.attachMedia(video);
+        hls.on(Hls.Events.ERROR, function(event, data) {
+          console.error('HLS.js error:', data);
+        });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = '/stream/stream.m3u8';
       }
+      videojs(video); // Initialize Video.js
     }
-
-    // Player is always visible now
-    video.controls = true;
-    loading.style.display = '';
 
     checkSegmentsAndPlay();
   </script>
