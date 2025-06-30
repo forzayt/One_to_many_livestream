@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
-<head><title>Stream Webcam</title></head>
+<head>
+  <title>Stream Webcam</title>
+</head>
 <body>
   <h2>Start Live Stream</h2>
   <video id="preview" width="640" height="360" autoplay muted></video>
@@ -24,7 +26,7 @@
         }
       };
 
-      mediaRecorder.start(1000); // send every 1s
+      mediaRecorder.start(1000); // 1-second chunks
     }
 
     startStreaming();

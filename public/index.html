@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
-<head><title>Watch Live</title></head>
+<head>
+  <title>Watch Live</title>
+</head>
 <body>
   <h2>Live Viewer</h2>
   <video id="player" width="640" height="360" controls autoplay></video>
@@ -8,9 +10,19 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     const video = document.getElementById('player');
-    const hls = new Hls();
-    hls.loadSource('/stream/stream.m3u8');
-    hls.attachMedia(video);
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({
+        liveSyncDuration: 3,
+        maxBufferLength: 5,
+        maxMaxBufferLength: 10,
+        lowLatencyMode: true
+      });
+      hls.loadSource('/stream/stream.m3u8');
+      hls.attachMedia(video);
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = '/stream/stream.m3u8';
+    }
   </script>
 </body>
 </html>

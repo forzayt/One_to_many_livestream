@@ -8,16 +8,16 @@ const app = express();
 const PORT = 3000;
 const STREAM_DIR = path.join(__dirname, 'stream');
 
-// Serve frontend and HLS stream
+// Serve public pages and stream
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/stream', express.static(STREAM_DIR));
 
-// Start Express server
+// Start server
 const server = app.listen(PORT, () => {
   console.log(`✅ Web + HLS server running at http://localhost:${PORT}`);
 });
 
-// WebSocket server for broadcasters
+// WebSocket server for stream input
 const wss = new WebSocket.Server({ server, path: '/stream' });
 
 wss.on('connection', (ws) => {
@@ -26,7 +26,7 @@ wss.on('connection', (ws) => {
   // Ensure stream folder exists
   if (!fs.existsSync(STREAM_DIR)) fs.mkdirSync(STREAM_DIR);
 
-  // Start FFmpeg to convert browser stream (webm) to HLS
+  // Start FFmpeg process with tuned options
   const ffmpeg = spawn('ffmpeg', [
     '-f', 'webm',
     '-i', 'pipe:0',
@@ -37,12 +37,13 @@ wss.on('connection', (ws) => {
     '-ar', '44100',
     '-b:a', '64k',
     '-f', 'hls',
-    '-hls_time', '1',
-    '-hls_list_size', '4',
-    '-hls_flags', 'delete_segments',
+    '-hls_time', '2',                             // 👈 2 sec segments
+    '-hls_list_size', '6',                        // 👈 playlist holds 6 chunks
+    '-hls_flags', 'delete_segments+append_list',  // 👈 smooth playback
     path.join(STREAM_DIR, 'stream.m3u8')
   ]);
 
+  // Log FFmpeg output
   ffmpeg.stderr.on('data', (data) => {
     console.log('FFmpeg:', data.toString());
   });
@@ -68,7 +69,6 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log('🛑 Stream ended');
 
-    // Close FFmpeg
     try {
       ffmpeg.stdin.end();
     } catch (e) {
@@ -76,14 +76,14 @@ wss.on('connection', (ws) => {
     }
     ffmpeg.kill('SIGINT');
 
-    // Delete stream folder
+    // Delete stream folder on end
     fs.rm(STREAM_DIR, { recursive: true, force: true }, (err) => {
       if (err) {
         console.error('❌ Failed to delete stream folder:', err.message);
       } else {
         console.log('🧹 Stream folder deleted');
 
-        // Optional: Recreate empty folder for next stream
+        // Recreate for next stream
         fs.mkdir(STREAM_DIR, { recursive: true }, (mkdirErr) => {
           if (mkdirErr) {
             console.error('⚠️ Failed to recreate stream folder:', mkdirErr.message);
