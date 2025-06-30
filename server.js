@@ -4,6 +4,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const https = require('https');
+const os = require('os');
 
 const app = express();
 const PORT = 3000;
@@ -15,7 +16,19 @@ app.use('/stream', express.static(STREAM_DIR));
 
 // Start server
 const server = app.listen(PORT, () => {
+  // Get local network IP address
+  const interfaces = os.networkInterfaces();
+  let localIp = 'localhost';
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        localIp = iface.address;
+        break;
+      }
+    }
+  }
   console.log(`✅ Web + HLS server running at http://localhost:${PORT}`);
+  console.log(`🌐 Local network:   http://${localIp}:${PORT}`);
 
   // Fetch and log public IP
   https.get('https://api.ipify.org?format=json', (res) => {
@@ -23,7 +36,7 @@ const server = app.listen(PORT, () => {
     res.on('data', chunk => data += chunk);
     res.on('end', () => {
       const ip = JSON.parse(data).ip;
-      console.log(`🌐 Public IP: http://${ip}:${PORT}`);
+      console.log(`🌐 Public IP:      http://${ip}:${PORT}`);
     });
   }).on('error', (err) => {
     console.error('❌ Failed to fetch public IP:', err.message);
@@ -43,17 +56,23 @@ wss.on('connection', (ws) => {
   const ffmpeg = spawn('ffmpeg', [
     '-f', 'webm',
     '-i', 'pipe:0',
-    '-c:v', 'libx264',
-    '-preset', 'ultrafast',
-    '-tune', 'zerolatency',
-    '-c:a', 'aac',
-    '-ar', '44100',
-    '-b:a', '64k',
+    // Video filters for 360p and source
+    '-filter_complex', '[0:v]split=2[v1][v2];[v1]scale=-2:360[v1out];[v2]copy[v2out]',
+    // 360p rendition
+    '-map', '[v1out]', '-c:v:0', 'libx264', '-b:v:0', '600k', '-preset', 'ultrafast', '-tune', 'zerolatency',
+    // Source/original rendition
+    '-map', '[v2out]', '-c:v:1', 'libx264', '-b:v:1', '1500k', '-preset', 'ultrafast', '-tune', 'zerolatency',
+    // Audio (same for both)
+    '-map', 'a:0', '-c:a:0', 'aac', '-ar', '44100', '-b:a:0', '64k',
+    '-map', 'a:0', '-c:a:1', 'aac', '-ar', '44100', '-b:a:1', '64k',
+    // HLS settings
     '-f', 'hls',
     '-hls_time', '2',
-    '-hls_list_size', '6',
+    '-hls_list_size', '12',
     '-hls_flags', 'delete_segments+append_list',
-    path.join(STREAM_DIR, 'stream.m3u8')
+    '-master_pl_name', 'stream.m3u8',
+    '-var_stream_map', 'v:0,a:0 v:1,a:1',
+    path.join(STREAM_DIR, 'stream_%v.m3u8')
   ]);
 
   ffmpeg.stderr.on('data', (data) => {
